@@ -1,0 +1,21 @@
+{
+    "name": "SillyGuy",
+    "level": 999,
+    
+    "tags": ["Bloodfiend", "The Strongest", "Male", "Saiyan"],
+    "immuneTo": "AllAilments",
+
+    "resistances": {
+        "slash": 2,
+        "pierce": 0.1,
+        "blunt": 0.5
+    },
+    
+    "hatred": 999,
+    "fluency": 999,
+    "solidarity": 999,
+    "rationality": 999,
+    "stability": 999,
+
+    "bio": "Idk where ill even display this but test"
+}
