@@ -11,24 +11,93 @@ allies = []
 enemies = []
 basicStats = ["Hatred", "Fluency", "Solidarity", "Rationality", "Stability"]
 
+'''class EventSystem(object):
+    def __init__(self):
+        self.listeners = {}
+    
+    def register(self, event, callback):
+        if self.listeners.get(event):
+            self.listeners[event].append(callback)
+        else:
+            self.listeners[event] = [callback]
+    
+    def unregister(self, event):
+        if '''
+
+
+# abstract bullshit plstohelp
+class Listener:
+    def __init__(self, observer, event, callback):
+        self.Observer = observer
+        self.Event = event
+        self.Callback = callback
+
+class EventManager:
+    def __init__(self):
+        self.listeners = {}
+
+    def listen(self, listener: Listener):
+        event = listener.Event
+        if event in self.listeners:
+            self.listeners[event].append(listener)
+        else:
+            self.listeners[event] = [listener]
+
+    def clean(self, listener: Listener):
+        event = listener.Event
+        if event in self.listeners:
+            self.listeners[event].remove(listener)
+            if not self.listeners[event]: #if the list is empty
+                del self.listeners[event]
+
+    def fire(self, event, *args, **kwargs):
+        if event in self.listeners:
+            for listener in self.listeners[event]:
+                listener.Callback(*args, **kwargs)
+maid = EventManager()
+
+class StatusEffect:
+    def __init__(self, name, duration, apply_effect, remove_effect=None):
+        self.Name = name
+        self.Duration = duration
+        self.ApplyEffect = apply_effect
+        self.RemoveEffect = remove_effect
+
+    def apply(self, battler):
+        self.ApplyEffect(battler)
+
+    def remove(self, battler):
+        if self.RemoveEffect:
+            self.RemoveEffect(battler)
+
 class Dice:
-    def __init__(self, min, max, supertype, type="none", prefixes=[], flavor=None, owner=None):
+    def __init__(self, min, max, supertype, type="none", prefixes=[], abilities={}, flavor=None, owner=None):
         self.Supertype = supertype
         self.Type = type
         self.Min = min
         self.Max = max
         self.Prefixes = prefixes
+        self.Abilities = abilities or {}
         self.Flavor = flavor
         self.Owner = owner
 
+    # inspired by lor spaghetti, the Dice object could contain a list called diceBuffs that passives and other buffs
+    # add dicts to, each with keys like "DmgMultiplier" or "ClashPower" and so on
+    # and these methods could iterate through these buffs to apply them after firing the event
+
     def roll(self):
         result = random.randint(self.Min, self.Max)
-        # Fire OnDiceRoll event here
         self.Result = result
         print(f"{self.Type} {self.Min}~{self.Max}, rolled {result}")
-        return result
+
+        # Fire OnDiceRoll event here
+        maid.fire("OnDiceRoll", self)
+        return self.Result
     
     def blockma(self, target, clashResult):
+        maid.fire("OnBlock", self)
+
+        # insert additional buffs to dmg here
         damage = clashResult["winner"].Result - clashResult["loser"].Result
         print(f"{self.Owner.Name} blocked {clashResult["loser"].Owner.Name}'s attack.")
         return damage
@@ -40,11 +109,20 @@ class Dice:
             if clashResult.get("loser") and clashResult["loser"].Type == "block":
                 initDamage =- clashResult["loser"].Result
                 print(f"{self.Owner} broke through {clashResult['loser'].Owner}'s block.")
-        
+
         damage = round((self.Owner.Hatred/10 + initDamage) * target.DmgResist.get(self.Type, 1))
         sanDamage = round(damage/2)
         target.takeDamage(damage)
         target.takeSanityDamage(sanDamage)
+
+        if self.Abilities.get("OnHit"):
+            self.Abilities["OnHit"](
+                dice=self,
+                target=target,
+                clashResult=clashResult,
+                damage=damage
+            )
+
         return damage
     
     def clash(self, targetDice):
@@ -160,7 +238,6 @@ class Battler:
                     winner.Owner.ClashDice.pop(0)
                 
             if winner.Type != "evade" and not ("counter" in winner.Prefixes):
-                print("popped")
                 winner.Owner.ClashDice.pop(0)
             # i hate unbreakables do not @ me
             loser.Owner.ClashDice.pop(0)
@@ -177,7 +254,7 @@ class Battler:
             # unopposed attack
             # checks for target's clash dice
             # genius!
-            if len(target.StoredDice) > 0 or len(target.ClashDice) > 0:
+            if (len(target.StoredDice) > 0 or len(target.ClashDice) > 0) and target.Health > 0:
                 # this is going to cause so many inexplicable bugs
                 # but i kind of dont care rn... fix only when it breaks
                 target.ClashDice.extend(target.StoredDice)
@@ -187,8 +264,8 @@ class Battler:
                 clashResult = nextDice.clash(targetDice)
                 self.evalClashResult(target, clashResult)
             else:
-                target.ClashDice = []
-                if nextDice.Supertype == "offense" and not ("counter" in nextDice.Prefixes):
+                #target.ClashDice.clear()
+                if nextDice.Supertype == "offense" and not ("counter" in nextDice.Prefixes) and target.Health > 0:
                     nextDice.roll()
                     nextDice.diceDamage(target)
                     self.ClashDice.pop(0)
@@ -221,8 +298,9 @@ class Battler:
                 print('continued')
                 continue
 
-            clashResult = dice1.clash(dice2)
-            self.evalClashResult(target, clashResult)
+            if target.Health > 0:
+                clashResult = dice1.clash(dice2)
+                self.evalClashResult(target, clashResult)
             # TODO: Make Evade and Counter dice recycle (aka not pop)
 
             input("Enter to proceed")
@@ -230,8 +308,8 @@ class Battler:
         self.unopposed(target)
         target.unopposed(self)
 
-        self.ClashDice = []
-        target.ClashDice = []
+        self.ClashDice.clear()
+        target.ClashDice.clear()
     
     def useSkill(self, skill: Skill, intercepting=None):
         self.Radiance -= skill.Cost
@@ -364,12 +442,14 @@ def battle():
             battler.Radiance = battler.MaxRadiance
 
         for battler in allBattlers:
-            battler.turn()
+            if battler.Health > 0:
+                battler.turn()
         
         # Scene End
 
 print("Hiiii :3")
 addAlly(loadBattler("Hisei"))
 addEnemy(loadBattler("goku"))
+print(True if [] else False)
 battle()
 #input("Press enter to close the program.")

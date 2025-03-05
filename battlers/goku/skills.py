@@ -5,16 +5,15 @@ talents = {
 def onUse(user):
     user.healHP(10)
 
+def testFunc(**kwargs):
+    print("Test On Hit")
+
 skills = {
     "UltraInstinct": {
         "Name": "UltraInstinct",
         "Cost": 6,
         "Target": "SingleEnemy",
         "Flavor": "*dodges*",
-
-        "Abilities": {
-
-        },
 
         "Dice": [
             {"supertype": "defense", "type": "evade", "prefixes": ["counter"], "min": 99, "max": 99},
@@ -27,12 +26,12 @@ skills = {
         "Target": "SingleEnemy",
         "Flavor": "Goku donuts {enemy}.",
 
-        "Abilities": {
-
-        },
-
         "Dice": [
-            {"supertype": "offense", "type": "pierce", "min": 20, "max": 20,},
+            {"supertype": "offense", "type": "pierce", "min": 20, "max": 20,
+             "abilities": {
+                 "OnHit": testFunc
+             }
+            },
         ]
     },
 
