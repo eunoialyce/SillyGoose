@@ -74,7 +74,7 @@ class Skill:
         self.Cost = cost
         self.FlavorText = flavor or f"You cast {self.Name}."
         self.Target = target or "SingleEnemy"
-        self.Abilities = abilities
+        self.Abilities = abilities or {}
         self.DiceList = diceList
 
 class Battler:
@@ -356,7 +356,7 @@ def battle():
         battler.Initiative = random.randint(1, battler.Fluency)
         print(f"{battler.Name} rolled a {battler.Initiative} for initiative!")
 
-    allBattlers = sorted(allies + enemies, key=lambda x: x.Initiative)
+    allBattlers = sorted(allies + enemies, key=lambda x: x.Initiative, reverse=True)
 
     while len(allies) > 0 and len(enemies) > 0:
         # Scene Start
@@ -369,7 +369,7 @@ def battle():
         # Scene End
 
 print("Hiiii :3")
-addAlly(loadBattler("goku"))
+addAlly(loadBattler("Hisei"))
 addEnemy(loadBattler("goku"))
 battle()
 #input("Press enter to close the program.")

@@ -2,56 +2,50 @@ talents = {
 
 }
 
-def onUse(user):
-    user.healHP(10)
-
 skills = {
-    "UltraInstinct": {
-        "Name": "UltraInstinct",
-        "Cost": 6,
+    "GreatswordRend": {
+        "Name": "Greatsword Rend",
+        "Cost": 10,
         "Target": "SingleEnemy",
-        "Flavor": "*dodges*",
-
-        "Abilities": {
-
-        },
+        "Flavor": "Hisei grips her blade with both hands, bring two powerful and heavy slashes at {enemy}. The frigid touch of her blade freezes even the rainwater around the two. ",
 
         "Dice": [
-            {"supertype": "defense", "type": "evade", "prefixes": ["counter"], "min": 99, "max": 99},
+            {"supertype": "offense", "type": "slash", "min": 8, "max": 16},
+            {"supertype": "offense", "type": "slash", "min": 8, "max": 16}
         ]
     },
 
-    "Donut": {
-        "Name": "Donut :3",
-        "Cost": 4,
+    "RavagingCrash": {
+        "Name": "Ravaging Crash",
+        "Cost": 15,
         "Target": "SingleEnemy",
-        "Flavor": "Goku donuts {enemy}.",
+        "Flavor": "valid crashout",
 
         "Abilities": {
 
         },
 
         "Dice": [
-            {"supertype": "offense", "type": "pierce", "min": 20, "max": 20,},
+            {"supertype": "offense", "type": "slash", "min": 7, "max": 14},
+            {"supertype": "offense", "type": "pierce", "min": 8, "max": 16},
+            {"supertype": "defense", "type": "evade", "min": 5, "max": 10},
+            {"supertype": "offense", "type": "slash", "min": 5, "max": 15},
+            {"supertype": "offense", "type": "slash", "prefixes":["counter"], "min": 9, "max": 18}
         ]
     },
 
-    "GOKUBLAST": {
-        "Name": "GOKU BLAST",
+    "DDC": {
+        "Name": "DiamondDustCrush",
+        "Cost": 30,
         "Target": "SingleEnemy",
-        "Flavor": "Goku heals 10 HP then kills {enemy}.",
-
-        "Abilities": {
-            # "event": "OnUse", 
-            # "abilities": [], # Abilities can either be a function defined here or a name of an ability
-            # that's accessed in a global module later
-            "OnUse": onUse,
-        },
+        "Flavor": "idk",
 
         "Dice": [
-            {"supertype": "offense", "type": "blunt", "min": 1, "max": 20, "flavor": "GRIPS YOY TO DEATH"},
-            {"supertype": "offense", "type": "pierce", "min": 1, "max": 20},
-            {"supertype": "offense", "type": "slash", "min": 1, "max": 20}
+            {"supertype": "defense", "type": "evade", "min": 4, "max": 12},
+            {"supertype": "offense", "type": "blunt", "min": 3, "max": 10},
+            {"supertype": "offense", "type": "slash", "min": 5, "max": 12},
+            {"supertype": "offense", "type": "slash", "min": 5, "max": 12},
+            {"supertype": "offense", "type": "slash", "min": 5, "max": 12}
         ]
     }
 }
