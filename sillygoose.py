@@ -1,6 +1,7 @@
 import os
 import random
 import math
+import copy
 import time
 import json
 import importlib
@@ -11,29 +12,56 @@ enemies = []
 basicStats = ["Hatred", "Fluency", "Solidarity", "Rationality", "Stability"]
 
 class Dice:
-    def __init__(self, min, max, type, damageType=None, flavor=None):
+    def __init__(self, min, max, supertype, type="none", prefixes=None, flavor=None, owner=None):
+        self.Supertype = supertype
         self.Type = type
-        self.DamageType = damageType
         self.Min = min
         self.Max = max
+        self.Prefixes = prefixes
         self.Flavor = flavor
+        self.Owner = owner
 
     def roll(self):
         result = random.randint(self.Min, self.Max)
+        # Fire OnDiceRoll event here
         self.Result = result
-        print(f"{self.DamageType} {self.Min}~{self.Max}, rolled {result}")
+        print(f"{self.Type} {self.Min}~{self.Max}, rolled {result}")
+        return result
+    
+    def diceDamage(self, target):
+        damage = round((self.Owner.Hatred/10 + self.Result) * target.DmgResist.get(self.Type, 1))
+        target.takeDamage(damage)
+        return damage
+    
+    def clash(self, targetDice):
+        selfResult = self.roll()
+        targetResult = targetDice.roll()
+        result = {}
+
+        if selfResult > targetResult:
+            print(f"{self.Owner.Name} wins the clash!")
+            result["winner"] = self.Owner
+            result["loser"] = targetDice.Owner
+            result["damage"] = self.diceDamage(targetDice.Owner)
+        elif targetResult > selfResult:
+            print(f"{targetDice.Owner.Name} wins the clash!")
+            result["winner"] = targetDice.Owner
+            result["loser"] = self.Owner
+            result["damage"] = targetDice.diceDamage(self.Owner)
+        else:
+            print("It's a draw!")
+
         return result
 
 class Skill:
-    def __init__(self, name, cost=0, abilities=None, diceList=None, flavor=None, target=None):
+    def __init__(self, owner, name, cost=0, abilities={}, diceList=[], flavor=None, target=None):
         self.Name = name
+        self.Owner = owner
         self.Cost = cost
         self.FlavorText = flavor or f"You cast {self.Name}."
         self.Target = target or "SingleEnemy"
-        self.Abilities = abilities or {}
-
-        if diceList:
-            self.DiceList = [Dice(**dice) for dice in diceList]
+        self.Abilities = abilities
+        self.DiceList = diceList
 
 class Battler:
     def __init__(self, name, stats, skills=None, passives=None):
@@ -63,6 +91,7 @@ class Battler:
             for skillName, skillData in skills.skills.items():
                 self.Skills[skillName] = Skill(
                     name=skillData["Name"],
+                    owner = self,
                     abilities=skillData.get("Abilities"),
                     diceList=skillData.get("Dice"),
                     flavor=skillData.get("Flavor"),
@@ -83,71 +112,97 @@ class Battler:
 
         if self.Health <= 0:
             self.die()
-    
-    def diceDamage(self, attacker, dice):
-        damage = round((attacker.Hatred/10 + dice.Result) * self.DmgResist.get(dice.DamageType, 1))
-        self.takeDamage(damage)
 
     def healHP(self, amount):
         self.Health = min(self.Health + amount, self.MaxHealth)
         print(f"Healed {self.Name} for {amount} HP. {self.Health}/{self.MaxHealth}")
 
-    def useSkill(self, skill):
+    def healSP(self, amount):
+        self.Sanity = min(self.Sanity + amount, self.MaxSanity)
+        print(f"Healed {self.Name} for {amount} Sanity. {self.Sanity}/{self.MaxSanity}")        
+
+    def unopposed(self, target):
+        # check for counter dice here
+        while len(self.ClashDice) > 0:
+            nextDice = self.ClashDice[0]
+            if nextDice.Supertype == "offense":
+                nextDice.roll()
+                nextDice.diceDamage(target)
+                self.ClashDice.pop(0)
+            else:
+                self.StoredDice.append(nextDice)
+                print(f"Stored {nextDice.Type} {nextDice.Min}~{nextDice.Max} for future clashes.")
+                self.ClashDice.pop(0)
+
+            input("Enter to proceed")
+
+    def resolveClash(self, target):
+        while (len(self.ClashDice) > 0 and len(target.ClashDice) > 0):
+            dice1 = self.ClashDice[0]
+            dice2 = target.ClashDice[0]
+
+            clashResult = dice1.clash(dice2)
+            print(clashResult)
+
+            # TODO: Make Evade and Counter dice recycle (aka not pop)
+            winner = clashResult.get("winner")
+            loser = clashResult.get("loser")
+
+            self.ClashDice.pop(0)
+            target.ClashDice.pop(0)
+
+            input("Enter to proceed")
+
+        self.unopposed(target)
+        target.unopposed(self)
+
+        self.ClashDice = []
+        target.ClashDice = []
+    
+    def useSkill(self, skill: Skill, intercepting=None):
         self.Radiance -= skill.Cost
 
-        target = skill.Target
-        if target == "SingleEnemy":
-            print("Which enemy will you target?")
+        target = self
+        targetType = skill.Target
+        
+        # TODO: implement target types SingleAlly, AllAllies, AllEnemies, SingleBattler, AllBattlers
+        # maybe split the TargetType into tuples like this?? ("Single", "Enemy")
+        if intercepting:
+            target = intercepting.Owner
+        else:
+            outGroup, target = None, None
 
-            outGroup = allies if self in enemies else enemies
-            for index, ally in enumerate(outGroup):
-                print(f"{index}: {ally.Name}")
-            
-            targetIndex = int(input("Choose a target: "))
-            target = outGroup[targetIndex]
-            flavorText = skill.FlavorText.format(enemy=target.Name)
-            print(flavorText)
-            abilities = skill.Abilities
+            if targetType == "SingleEnemy":
+                print("Which enemy will you target?")
 
-            if abilities.get("OnUse"):
-                abilities["OnUse"](self)
-            
-            # CLASH LOGIC WOOOOOOOOO i hate this
-            if len(target.ClashDice) > 0:
-                for dice1, dice2 in itertools.zip_longest(skill.DiceList, target.ClashDice):
-                    dice1Result = dice1 and dice1.roll()
-                    dice2Result = dice2 and dice2.roll()
+                outGroup = allies if self in enemies else enemies
 
-                    if dice1 and dice2:
-                        if dice1Result > dice2Result:
-                            print(f"{self.Name} wins the clash!")
-                            target.diceDamage(self, dice1)
-                        elif dice2Result > dice1Result:
-                            print(f"{target.Name} wins the clash!")
-                            self.diceDamage(target, dice2)
-                        else:
-                            print("It's a draw!")
-                    elif dice1:
-                        target.diceDamage(self, dice1)
-                    elif dice2:
-                        self.diceDamage(target, dice2)
-                
-                    input("Enter to proceed")
+            if outGroup:
+                for index, ally in enumerate(outGroup):
+                    print(f"{index}: {ally.Name}")
 
-                
-                self.ClashDice = []
-                target.ClashDice = []
+                targetIndex = int(input("Choose a target: "))
+                target = outGroup[targetIndex]
+
+        flavorText = skill.FlavorText.format(enemy=target.Name)
+        print(flavorText)
+        
+        abilities = skill.Abilities
+        if abilities.get("OnUse"):
+            abilities["OnUse"](self)
+        
+        self.ClashDice = [Dice(owner=self, **dice) for dice in skill.DiceList]
+
+        # CLASH LOGIC WOOOOOOOOO i hate this
+        if len(target.ClashDice) > 0:
+            self.resolveClash(target)
+        else:
+            interceptSkill = target.interceptInput()
+            if interceptSkill:
+                target.useSkill(interceptSkill, skill)
             else:
-                interceptSkill = target.interceptInput()
-                if interceptSkill:
-                    self.ClashDice = skill.DiceList
-                    target.useSkill(interceptSkill)
-                else:
-                    # Unopposed attack
-                    for dice in skill.DiceList:
-                        dice.roll()
-                        target.diceDamage(self, dice)
-                        input("Enter to proceed")
+                # Unopposed attack
+                self.unopposed(target)
 
     def interceptInput(self):
         intercept = input(f"An attack is en route to {self.Name}. Will they intercept? Y for yes: ")
@@ -179,7 +234,9 @@ class Battler:
     def turn(self):
         print(f"It's {self.Name}'s turn. What will they do?")
         selectSkill = self.inputSkill()
-        self.useSkill(selectSkill)
+
+        if selectSkill:
+            self.useSkill(selectSkill)
 
 def loadBattler(name):
     path = os.path.join(os.getcwd(), "battlers", name, "data.json")

@@ -6,6 +6,21 @@ def onUse(user):
     user.healHP(10)
 
 skills = {
+    "UltraInstinct": {
+        "Name": "UltraInstinct",
+        "Cost": 6,
+        "Target": "SingleEnemy",
+        "Flavor": "Goku dodges.",
+
+        "Abilities": {
+
+        },
+
+        "Dice": [
+            {"supertype": "defense", "type": "evade", "min": 99, "max": 99,},
+        ]
+    },
+
     "Donut": {
         "Name": "Donut :3",
         "Cost": 4,
@@ -13,14 +28,11 @@ skills = {
         "Flavor": "Goku donuts {enemy}.",
 
         "Abilities": {
-            # "event": "OnUse", 
-            # "abilities": [], # Abilities can either be a function defined here or a name of an ability
-            # that's accessed in a global module later
-            "OnUse": onUse,
+
         },
 
         "Dice": [
-            {"type": "offense", "damageType": "pierce", "min": 20, "max": 20, "flavor": "GRIPS YOY TO DEATH"},
+            {"supertype": "offense", "type": "pierce", "min": 20, "max": 20,},
         ]
     },
 
@@ -37,9 +49,9 @@ skills = {
         },
 
         "Dice": [
-            {"type": "offense", "damageType": "blunt", "min": 1, "max": 20, "flavor": "GRIPS YOY TO DEATH"},
-            {"type": "offense", "damageType": "pierce", "min": 1, "max": 20},
-            {"type": "offense", "damageType": "slash", "min": 1, "max": 20}
+            {"supertype": "offense", "type": "blunt", "min": 1, "max": 20, "flavor": "GRIPS YOY TO DEATH"},
+            {"supertype": "offense", "type": "pierce", "min": 1, "max": 20},
+            {"supertype": "offense", "type": "slash", "min": 1, "max": 20}
         ]
     }
 }
