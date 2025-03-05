@@ -12,7 +12,7 @@ enemies = []
 basicStats = ["Hatred", "Fluency", "Solidarity", "Rationality", "Stability"]
 
 class Dice:
-    def __init__(self, min, max, supertype, type="none", prefixes=None, flavor=None, owner=None):
+    def __init__(self, min, max, supertype, type="none", prefixes=[], flavor=None, owner=None):
         self.Supertype = supertype
         self.Type = type
         self.Min = min
@@ -28,9 +28,23 @@ class Dice:
         print(f"{self.Type} {self.Min}~{self.Max}, rolled {result}")
         return result
     
-    def diceDamage(self, target):
-        damage = round((self.Owner.Hatred/10 + self.Result) * target.DmgResist.get(self.Type, 1))
+    def blockma(self, target, clashResult):
+        damage = clashResult["winner"].Result - clashResult["loser"].Result
+        print(f"{self.Owner.Name} blocked {clashResult["loser"].Owner.Name}'s attack.")
+        return damage
+
+    def diceDamage(self, target, clashResult=None):
+        initDamage = self.Result
+
+        if clashResult:
+            if clashResult.get("loser") and clashResult["loser"].Type == "block":
+                initDamage =- clashResult["loser"].Result
+                print(f"{self.Owner} broke through {clashResult['loser'].Owner}'s block.")
+        
+        damage = round((self.Owner.Hatred/10 + initDamage) * target.DmgResist.get(self.Type, 1))
+        sanDamage = round(damage/2)
         target.takeDamage(damage)
+        target.takeSanityDamage(sanDamage)
         return damage
     
     def clash(self, targetDice):
@@ -39,15 +53,15 @@ class Dice:
         result = {}
 
         if selfResult > targetResult:
-            print(f"{self.Owner.Name} wins the clash!")
-            result["winner"] = self.Owner
-            result["loser"] = targetDice.Owner
-            result["damage"] = self.diceDamage(targetDice.Owner)
+            print(f"{self.Owner.Name} wins the clash.")
+            result["winner"] = self
+            result["loser"] = targetDice
+            #result["damage"] = self.diceDamage(targetDice.Owner)
         elif targetResult > selfResult:
-            print(f"{targetDice.Owner.Name} wins the clash!")
-            result["winner"] = targetDice.Owner
-            result["loser"] = self.Owner
-            result["damage"] = targetDice.diceDamage(self.Owner)
+            print(f"{targetDice.Owner.Name} wins the clash.")
+            result["winner"] = targetDice
+            result["loser"] = self
+            #result["damage"] = targetDice.diceDamage(self.Owner)
         else:
             print("It's a draw!")
 
@@ -108,10 +122,17 @@ class Battler:
 
     def takeDamage(self, damage):
         self.Health -= damage
-        print(f"{self.Name} took {damage} damage! {self.Health}/{self.MaxHealth}")
+        print(f"{self.Name} took {damage} damage. {self.Health}/{self.MaxHealth}")
 
         if self.Health <= 0:
             self.die()
+
+    def takeSanityDamage(self, damage):
+        self.Sanity -= damage
+        print(f"{self.Name} lost {damage} Sanity. {self.Sanity}/{self.MaxSanity}")
+
+        if self.Health <= 0:
+            print(f"{self.Name} was staggered!")
 
     def healHP(self, amount):
         self.Health = min(self.Health + amount, self.MaxHealth)
@@ -121,18 +142,60 @@ class Battler:
         self.Sanity = min(self.Sanity + amount, self.MaxSanity)
         print(f"Healed {self.Name} for {amount} Sanity. {self.Sanity}/{self.MaxSanity}")        
 
+    def evalClashResult(self, target, clashResult):
+        winner = clashResult.get("winner")
+        loser = clashResult.get("loser")
+
+        if winner and loser:
+            if winner.Supertype == "offense":
+                winner.diceDamage(loser.Owner, clashResult)
+            elif winner.Type == "block":
+                winner.blockma(loser.Owner, clashResult)
+            elif winner.Type == "evade":
+                print(f"{winner.Owner.Name} evaded {loser.Owner.Name}'s attack.")
+                winner.Owner.healSP(winner.Result)
+
+                if loser.Supertype == "defense":
+                    print("NO RECYLFCING")
+                    winner.Owner.ClashDice.pop(0)
+                
+            if winner.Type != "evade" and not ("counter" in winner.Prefixes):
+                print("popped")
+                winner.Owner.ClashDice.pop(0)
+            # i hate unbreakables do not @ me
+            loser.Owner.ClashDice.pop(0)
+        else:
+            # Draw and nothing happens
+            self.ClashDice.pop(0)
+            target.ClashDice.pop(0)
+
     def unopposed(self, target):
         # check for counter dice here
         while len(self.ClashDice) > 0:
             nextDice = self.ClashDice[0]
-            if nextDice.Supertype == "offense":
-                nextDice.roll()
-                nextDice.diceDamage(target)
-                self.ClashDice.pop(0)
+
+            # unopposed attack
+            # checks for target's clash dice
+            # genius!
+            if len(target.StoredDice) > 0 or len(target.ClashDice) > 0:
+                # this is going to cause so many inexplicable bugs
+                # but i kind of dont care rn... fix only when it breaks
+                target.ClashDice.extend(target.StoredDice)
+                target.StoredDice.clear()
+
+                targetDice = target.ClashDice[0]
+                clashResult = nextDice.clash(targetDice)
+                self.evalClashResult(target, clashResult)
             else:
-                self.StoredDice.append(nextDice)
-                print(f"Stored {nextDice.Type} {nextDice.Min}~{nextDice.Max} for future clashes.")
-                self.ClashDice.pop(0)
+                target.ClashDice = []
+                if nextDice.Supertype == "offense" and not ("counter" in nextDice.Prefixes):
+                    nextDice.roll()
+                    nextDice.diceDamage(target)
+                    self.ClashDice.pop(0)
+                else:
+                    self.StoredDice.append(nextDice)
+                    print(f"Stored {nextDice.Type} {nextDice.Min}~{nextDice.Max} for future clashes.")
+                    self.ClashDice.pop(0)
 
             input("Enter to proceed")
 
@@ -141,15 +204,26 @@ class Battler:
             dice1 = self.ClashDice[0]
             dice2 = target.ClashDice[0]
 
+            willContinue = False
+            if "counter" in dice1.Prefixes:
+                self.StoredDice.append(dice1)
+                print(f"Stored {dice1.Type} {dice1.Min}~{dice1.Max} counter dice for later.")
+                self.ClashDice.pop(0)
+                willContinue = True
+
+            if "counter" in dice2.Prefixes:
+                target.StoredDice.append(dice2)
+                print(f"Stored {dice2.Type} {dice2.Min}~{dice2.Max} counter dice for later.")
+                target.ClashDice.pop(0)
+                willContinue = True
+
+            if willContinue:
+                print('continued')
+                continue
+
             clashResult = dice1.clash(dice2)
-            print(clashResult)
-
+            self.evalClashResult(target, clashResult)
             # TODO: Make Evade and Counter dice recycle (aka not pop)
-            winner = clashResult.get("winner")
-            loser = clashResult.get("loser")
-
-            self.ClashDice.pop(0)
-            target.ClashDice.pop(0)
 
             input("Enter to proceed")
 
@@ -226,10 +300,10 @@ class Battler:
                 return skill
             else:
                 print("Not enough Radiance T^T")
-                self.inputSkill()
+                return self.inputSkill()
         else:
             print("That skill doesn't exist.")
-            self.inputSkill()
+            return self.inputSkill()
 
     def turn(self):
         print(f"It's {self.Name}'s turn. What will they do?")

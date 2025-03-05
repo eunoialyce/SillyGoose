@@ -1,0 +1,19 @@
+{
+    "name": "Tokomiya Hisei",
+    "level": 70,
+    "tags": ["Bloodfiend", "Female", "Downpour Office", "Fixer", "Color"],
+
+    "resistances": {
+        "slash": 0.1,
+        "pierce": 0.3,
+        "blunt": 0.5
+    },
+    
+    "hatred": 2398,
+    "fluency": 1873,
+    "solidarity": 1976,
+    "rationality": 1716,
+    "stability": 1541,
+
+    "bio": "tokokmiga hije"
+}

@@ -10,14 +10,14 @@ skills = {
         "Name": "UltraInstinct",
         "Cost": 6,
         "Target": "SingleEnemy",
-        "Flavor": "Goku dodges.",
+        "Flavor": "*dodges*",
 
         "Abilities": {
 
         },
 
         "Dice": [
-            {"supertype": "defense", "type": "evade", "min": 99, "max": 99,},
+            {"supertype": "defense", "type": "evade", "prefixes": ["counter"], "min": 99, "max": 99},
         ]
     },
 
