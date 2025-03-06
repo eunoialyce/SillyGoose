@@ -7,6 +7,8 @@ import json
 import importlib
 import itertools
 
+from common.common_statuses import StatusEffect
+
 allies = []
 enemies = []
 basicStats = ["Hatred", "Fluency", "Solidarity", "Rationality", "Stability"]
@@ -41,20 +43,6 @@ class EventManager:
             for listener in self.listeners[event]:
                 listener.Callback(*args, **kwargs)
 maid = EventManager()
-
-class StatusEffect:
-    def __init__(self, name, duration, apply_effect, remove_effect=None):
-        self.Name = name
-        self.Duration = duration
-        self.ApplyEffect = apply_effect
-        self.RemoveEffect = remove_effect
-
-    def apply(self, battler):
-        self.ApplyEffect(battler)
-
-    def remove(self, battler):
-        if self.RemoveEffect:
-            self.RemoveEffect(battler)
 
 class Dice:
     def __init__(self, min, max, supertype, type="none", prefixes=[], abilities={}, flavor=None, owner=None):
@@ -375,8 +363,9 @@ class Battler:
             print("That skill doesn't exist.")
             return self.inputSkill()
         
-    def applyStatus(status: StatusEffect):
+    def applyStatus(self, status: StatusEffect):
         if self.StatusEffects.get(status.Name):
+            pass
 
     def turn(self):
         print(f"It's {self.Name}'s turn. What will they do?")
@@ -452,7 +441,7 @@ def battle():
 print("Hiiii :3")
 addAlly(loadBattler("Hisei"))
 goku = addEnemy(loadBattler("goku"))
-addEnemy(goku)
+#addEnemy(goku)
 print(True if [] else False)
 battle()
 #input("Press enter to close the program.")
