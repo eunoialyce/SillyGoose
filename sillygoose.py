@@ -11,20 +11,6 @@ allies = []
 enemies = []
 basicStats = ["Hatred", "Fluency", "Solidarity", "Rationality", "Stability"]
 
-'''class EventSystem(object):
-    def __init__(self):
-        self.listeners = {}
-    
-    def register(self, event, callback):
-        if self.listeners.get(event):
-            self.listeners[event].append(callback)
-        else:
-            self.listeners[event] = [callback]
-    
-    def unregister(self, event):
-        if '''
-
-
 # abstract bullshit plstohelp
 class Listener:
     def __init__(self, observer, event, callback):
@@ -100,6 +86,7 @@ class Dice:
         # insert additional buffs to dmg here
         damage = clashResult["winner"].Result - clashResult["loser"].Result
         print(f"{self.Owner.Name} blocked {clashResult["loser"].Owner.Name}'s attack.")
+        target.takeSanityDamage(damage)
         return damage
 
     def diceDamage(self, target, clashResult=None):
@@ -110,6 +97,9 @@ class Dice:
                 initDamage =- clashResult["loser"].Result
                 print(f"{self.Owner} broke through {clashResult['loser'].Owner}'s block.")
 
+        if self.Flavor:
+            print(self.Flavor.format(enemy=target.Name))
+        
         damage = round((self.Owner.Hatred/10 + initDamage) * target.DmgResist.get(self.Type, 1))
         sanDamage = round(damage/2)
         target.takeDamage(damage)
@@ -265,9 +255,11 @@ class Battler:
                 self.evalClashResult(target, clashResult)
             else:
                 #target.ClashDice.clear()
-                if nextDice.Supertype == "offense" and not ("counter" in nextDice.Prefixes) and target.Health > 0:
-                    nextDice.roll()
-                    nextDice.diceDamage(target)
+                if nextDice.Supertype == "offense" and not ("counter" in nextDice.Prefixes):
+                    if target.Health > 0:
+                        nextDice.roll()
+                        nextDice.diceDamage(target)
+                    
                     self.ClashDice.pop(0)
                 else:
                     self.StoredDice.append(nextDice)
@@ -382,6 +374,9 @@ class Battler:
         else:
             print("That skill doesn't exist.")
             return self.inputSkill()
+        
+    def applyStatus(status: StatusEffect):
+        if self.StatusEffects.get(status.Name):
 
     def turn(self):
         print(f"It's {self.Name}'s turn. What will they do?")
@@ -392,7 +387,7 @@ class Battler:
 
 def loadBattler(name):
     path = os.path.join(os.getcwd(), "battlers", name, "data.json")
-    skillPath = f"battlers.{name}.skills"
+    skillPath = f"battlers.{name}.moveset"
 
     if os.path.exists(path):
         with open(path) as raw:
@@ -425,6 +420,7 @@ def teamFlavor(teamList):
     return finalString
 
 turnOwner = None
+
 def battle():
     print("Battle time!")
     print("Right,", teamFlavor(allies), "will strum with all their might against", teamFlavor(enemies) + "!")
@@ -435,9 +431,13 @@ def battle():
         print(f"{battler.Name} rolled a {battler.Initiative} for initiative!")
 
     allBattlers = sorted(allies + enemies, key=lambda x: x.Initiative, reverse=True)
+    global curScene
+    curScene = 1
 
     while len(allies) > 0 and len(enemies) > 0:
         # Scene Start
+        print(f"Scene {curScene} START")
+
         for battler in allBattlers:
             battler.Radiance = battler.MaxRadiance
 
@@ -446,10 +446,13 @@ def battle():
                 battler.turn()
         
         # Scene End
+        input(f"Scene {curScene} END")
+        curScene = curScene + 1
 
 print("Hiiii :3")
 addAlly(loadBattler("Hisei"))
-addEnemy(loadBattler("goku"))
+goku = addEnemy(loadBattler("goku"))
+addEnemy(goku)
 print(True if [] else False)
 battle()
 #input("Press enter to close the program.")
