@@ -1,23 +1,22 @@
+import common.common_statuses as CommonStatuses
+
 def onUse(user):
     user.healHP(10)
 
 def testFunc(**kwargs):
-    print("Test On Hit")
-    
-talents = {
-
-}
+    target = kwargs.get("target")
+    target.StatusManager.apply(CommonStatuses.Bleed(5))
 
 skills = {
     "UltraInstinct": {
         "Name": "UltraInstinct",
         "Cost": 6,
-        "Target": "SingleEnemy",
+        "Target": "None",
         "Flavor": "*dodges*",
 
         "Dice": [
-            {"supertype": "defense", "type": "evade", "prefixes": ["counter"], "min": 99, "max": 99},
-            {"supertype": "offense", "type": "blunt", "prefixes": ["counter"], "min": 10, "max": 20},
+            {"supertype": "defense", "type": "evade", "min": 99, "max": 99},
+            {"supertype": "offense", "type": "blunt", "min": 10, "max": 20},
         ]
     },
 

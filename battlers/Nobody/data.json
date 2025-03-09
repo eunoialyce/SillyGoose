@@ -1,0 +1,19 @@
+{
+    "name": "John \"Nobody\" Smith",
+    "level": 10,
+    "tags": ["Castrated", "Downpour Office", "Fixer", "Male"],
+
+    "resistances": {
+        "slash": 1.5,
+        "pierce": 0.5,
+        "blunt": 1
+    },
+    
+    "hatred": 104,
+    "fluency": 90,
+    "solidarity": 88,
+    "rationality": 80,
+    "stability": 96,
+
+    "bio": "A man who's found himself some time, alongside no memories of his life. He remembers the city, his name, and how to use a bow and arrow, but that's it. Alongside a phrase, \"Time waits for no man\". Let's see how this iteration of him turns out."
+}
