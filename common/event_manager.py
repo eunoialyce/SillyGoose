@@ -1,3 +1,4 @@
+# abstract bullshit plstohelp
 class Listener:
     def __init__(self, observer, event, callback):
         self.Observer = observer

@@ -7,15 +7,9 @@ import importlib
 from functools import partial
 
 import common.common_statuses as CommonStatuses
-import common.event_manager as EventMod
 from config import * # allies, enemies alongside stuff like Bloodfeast n shit
 
 StatusEffect = CommonStatuses.StatusEffect
-
-# abstract bullshit plstohelp
-Listener = EventMod.Listener
-EventManager = EventMod.EventManager
-maid = EventManager()
 
 class StatusManager:
     def __init__(self, battler):
