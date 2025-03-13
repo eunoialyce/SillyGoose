@@ -15,7 +15,6 @@ StatusEffect = CommonStatuses.StatusEffect
 # abstract bullshit plstohelp
 Listener = EventMod.Listener
 EventManager = EventMod.EventManager
-maid = EventManager()
 
 class StatusManager:
     def __init__(self, battler):
@@ -145,7 +144,7 @@ class DiceManager:
         self.ClashDice.pop(0)
 
     def resolveClash(self, target):
-        while self.ClashDice and target.ClashDice:
+        while self.ClashDice and target.ClashDice and self.Battler.canAct() and target.canAct():
             dice1 = self.ClashDice[0]
             dice2 = target.ClashDice[0]
 
@@ -176,7 +175,7 @@ class DiceManager:
 
     def unopposed(self, target):
         # check for counter dice here
-        while self.ClashDice:
+        while self.ClashDice and self.Battler.canAct():
             nextDice = self.ClashDice[0]
 
             # unopposed attack
@@ -234,7 +233,6 @@ class DiceManager:
                 if winner.Type != "evade" and not ("counter" in winner.Prefixes):
                     winner.Owner.ClashDice.pop(0)
                 
-
             # i hate unbreakables do not @ me
             loser.Owner.ClashDice.pop(0)
         else:
@@ -327,7 +325,7 @@ class Dice:
         return result
 
 class Skill:
-    def __init__(self, user, name, cost=0, abilities={}, diceList=[], flavor=None, target=None, cooldown=None):
+    def __init__(self, user, name, cost=0, abilities=None, diceList=None, flavor=None, target=None, cooldown=None):
         self.Name = name
         self.User = user
         self.Cost = cost
@@ -335,7 +333,10 @@ class Skill:
         self.FlavorText = flavor or f"You cast {self.Name}."
         self.Target = target or "SingleEnemy"
         self.Abilities = abilities or {}
-        self.DiceList = diceList
+        self.DiceList = diceList or []
+    
+    def selectTarget(self):
+        pass
 
 class Passive:
     def __init__(self, owner, event, callback):
@@ -394,6 +395,11 @@ class Battler:
                 for eventName, callback in skills.passives.items():
                     newPassive = Passive(self, eventName, callback)
                     self.Passives.append(newPassive)
+
+    def canAct(self):
+        # logic for checking if a character can act
+        if self.Health > 0 and self.Sanity > 0 and battleData["SkipScene"] != True:
+            return True
 
     def die(self):
         print(f"{self.Name} perishes.")
@@ -471,7 +477,6 @@ def battle():
 
     allBattlers = sorted(allies + enemies, key=lambda x: x.Initiative, reverse=True)
     global curScene
-    curScene = 1
 
     while allies and enemies: # empty lists return false
         # Scene Start
@@ -480,9 +485,11 @@ def battle():
 
         for battler in allBattlers:
             battler.Radiance = battler.MaxRadiance
+            if battler.Sanity <= 0:
+                battleData["Unstagger"].append(battler)
 
         for battler in allBattlers:
-            if battler.Health > 0:
+            if battler.canAct():
                 battler.ActionManager.turn()
         
         # Scene End
@@ -494,6 +501,10 @@ def battle():
             battler.DiceManager.StoredDice.clear()
             print("Cleared all dice.")
 
+            if battler in battleData["Unstagger"]:
+                battler.Sanity = battler.MaxSanity
+
+        battleData["SkipScene"] = False
         curScene = curScene + 1
 
 print("Hiiii :3")

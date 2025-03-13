@@ -59,9 +59,9 @@ skills = {
         },
 
         "Dice": [
-            {"supertype": "offense", "type": "blunt", "min": 1, "max": 20, "flavor": "GRIPS YOY TO DEATH"},
-            {"supertype": "offense", "type": "pierce", "min": 1, "max": 20},
-            {"supertype": "offense", "type": "slash", "min": 1, "max": 20}
+            {"supertype": "offense", "type": "blunt", "min": 20, "max": 20, "flavor": "GRIPS YOY TO DEATH"},
+            {"supertype": "offense", "type": "pierce", "min": 20, "max": 20},
+            {"supertype": "offense", "type": "slash", "min": 20, "max": 20}
         ]
     }
 }

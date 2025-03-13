@@ -1,5 +1,3 @@
-from config import *
-
 def diceRollBuff(passive, dice):
     if dice.Type == "pierce" and dice.Owner == passive.Owner:
         print("Pierce Power + 3!")
